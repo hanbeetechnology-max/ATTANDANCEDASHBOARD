@@ -133,6 +133,16 @@ function App() {
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [slowLoading, setSlowLoading] = useState(false)
+
+  useEffect(() => {
+    if (!loading) {
+      setSlowLoading(false)
+      return
+    }
+    const timer = setTimeout(() => setSlowLoading(true), 4000)
+    return () => clearTimeout(timer)
+  }, [loading])
 
   useEffect(() => {
     let cancelled = false
@@ -204,7 +214,13 @@ function App() {
             <StatTile label="Total extra hours" value={stats.extraHours.toFixed(2)} tone="neutral" />
           </section>
 
-          {loading && !data && <p className="muted">Loading attendance…</p>}
+          {loading && !data && (
+            <p className="muted">
+              {slowLoading
+                ? 'Still loading — the backend may be waking up from sleep, this can take up to a minute.'
+                : 'Loading attendance…'}
+            </p>
+          )}
 
           {hasNoRoster && (
             <p className="dashboard__notice">

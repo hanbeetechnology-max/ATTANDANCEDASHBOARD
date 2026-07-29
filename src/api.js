@@ -1,5 +1,7 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
-const REQUEST_TIMEOUT_MS = 10000
+// Render's free tier spins the backend down after ~15 min idle; waking it
+// back up can take 30-60s, so the timeout has to tolerate a cold start.
+const REQUEST_TIMEOUT_MS = 45000
 
 export async function fetchAttendance(dateStr) {
   const controller = new AbortController()
