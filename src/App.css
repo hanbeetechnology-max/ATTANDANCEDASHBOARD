@@ -237,8 +237,8 @@
   font-weight: 600;
 }
 
-.value--highlight {
-  color: var(--warning);
+.value--overtime {
+  color: var(--good);
 }
 
 .employee-card__breaks {

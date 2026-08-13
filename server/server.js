@@ -19,9 +19,14 @@ const TEA_TARGET_SEC = 30 * 60;
 // Grace periods: scanning slightly past a threshold still counts as on time.
 // These only shift the late/overLimit flags - the actual scanned times shown
 // on the dashboard are never adjusted or annotated with the buffer itself.
-const LATE_BUFFER_SEC = 10 * 60; // check-in up to 10:10 AM isn't "late"
-const LUNCH_BUFFER_SEC = 8 * 60; // lunch up to 68 min isn't "over limit"
-const TEA_BUFFER_SEC = 5 * 60; // tea up to 35 min isn't "over limit"
+//
+// The buffer covers the whole final minute, not just up to :00 of it - e.g.
+// a 10-minute late buffer means 10:00:01-10:10:59 is still on time, and only
+// 10:11:00 onward counts as late. So comparisons floor to whole minutes
+// past the threshold before comparing against the buffer in minutes.
+const LATE_BUFFER_MINUTES = 10; // check-in through 10:10:59 isn't "late"
+const LUNCH_BUFFER_MINUTES = 8; // lunch through 68:59 isn't "over limit"
+const TEA_BUFFER_MINUTES = 5; // tea through 35:59 isn't "over limit"
 
 // Fixed scan sequence for one employee's day: 1st = check-in, 2nd/3rd = lunch
 // out/in, 4th/5th = tea out/in, 6th = check-out. Every scan's meaning is
@@ -30,13 +35,19 @@ const TEA_BUFFER_SEC = 5 * 60; // tea up to 35 min isn't "over limit"
 // scans in: check-in, lunch-out, lunch-in) must not be misread as "checked
 // out" just because scan #3 is currently the last one on record.
 const BREAK_SEQUENCE = [
-  { label: 'Lunch Break', outIdx: 1, inIdx: 2, targetSec: LUNCH_TARGET_SEC, bufferSec: LUNCH_BUFFER_SEC },
-  { label: 'Tea Break', outIdx: 3, inIdx: 4, targetSec: TEA_TARGET_SEC, bufferSec: TEA_BUFFER_SEC },
+  { label: 'Lunch Break', outIdx: 1, inIdx: 2, targetSec: LUNCH_TARGET_SEC, bufferMinutes: LUNCH_BUFFER_MINUTES },
+  { label: 'Tea Break', outIdx: 3, inIdx: 4, targetSec: TEA_TARGET_SEC, bufferMinutes: TEA_BUFFER_MINUTES },
 ];
 const CHECK_OUT_INDEX = 5;
 
 function pad(n) {
   return String(n).padStart(2, '0');
+}
+
+// True once whole minutes past the threshold exceed the buffer - so the
+// entire buffer-th minute (e.g. 10:10:00-10:10:59) still counts as on time.
+function exceedsBuffer(excessSeconds, bufferMinutes) {
+  return Math.floor(excessSeconds / 60) > bufferMinutes;
 }
 
 function parseTimeToSeconds(value) {
@@ -79,13 +90,13 @@ function buildEmployeeSummary(name, scanSeconds) {
 
   const checkInSec = scanSeconds[0];
   record.checkIn = formatSeconds(checkInSec);
-  record.late = checkInSec > OFFICE_START_SEC + LATE_BUFFER_SEC;
+  record.late = exceedsBuffer(checkInSec - OFFICE_START_SEC, LATE_BUFFER_MINUTES);
 
   // Each break only appears once BOTH its out and in scans have actually
   // happened; if only the out-scan has happened so far, it's in-progress
   // (no in time / duration yet) instead of being dropped or misread.
   let totalBreakSeconds = 0;
-  for (const { label, outIdx, inIdx, targetSec, bufferSec } of BREAK_SEQUENCE) {
+  for (const { label, outIdx, inIdx, targetSec, bufferMinutes } of BREAK_SEQUENCE) {
     if (scanCount > inIdx) {
       const outSec = scanSeconds[outIdx];
       const inSec = scanSeconds[inIdx];
@@ -96,7 +107,7 @@ function buildEmployeeSummary(name, scanSeconds) {
         out: formatSeconds(outSec),
         in: formatSeconds(inSec),
         durationMinutes: Math.round(duration / 60),
-        overLimit: duration > targetSec + bufferSec,
+        overLimit: exceedsBuffer(duration - targetSec, bufferMinutes),
         inProgress: false,
       });
     } else if (scanCount === outIdx + 1) {

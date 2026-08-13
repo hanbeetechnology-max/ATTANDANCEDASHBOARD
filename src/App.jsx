@@ -126,8 +126,8 @@ function EmployeeCard({ employee }) {
               <span className="value">{netHours != null ? formatHoursMinutes(netHours) : '—'}</span>
             </div>
             <div>
-              <span className="label">Extra hours</span>
-              <span className={`value${extraHours ? ' value--highlight' : ''}`}>
+              <span className="label">Overtime</span>
+              <span className={`value${extraHours ? ' value--overtime' : ''}`}>
                 {extraHours ? formatHoursMinutes(extraHours) : '—'}
               </span>
             </div>
@@ -222,7 +222,7 @@ function App() {
             <StatTile label="Absent" value={stats.absent} tone="critical" />
             <StatTile label="Late arrivals" value={stats.late} tone="warning" />
             <StatTile label="Incomplete scans" value={stats.incomplete} tone="serious" />
-            <StatTile label="Total extra hours" value={formatHoursMinutes(stats.extraHours)} tone="neutral" />
+            <StatTile label="Total overtime" value={formatHoursMinutes(stats.extraHours)} tone="good" />
           </section>
 
           {loading && !data && (
