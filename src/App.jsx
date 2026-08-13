@@ -10,10 +10,21 @@ function todayISO() {
 
 function formatTime12h(timeStr) {
   if (!timeStr) return null
-  const [hours, minutes, seconds] = timeStr.split(':').map(Number)
+  const [hours, minutes] = timeStr.split(':').map(Number)
   const period = hours >= 12 ? 'PM' : 'AM'
   const hour12 = hours % 12 === 0 ? 12 : hours % 12
-  return `${hour12}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')} ${period}`
+  return `${hour12}:${String(minutes).padStart(2, '0')} ${period}`
+}
+
+function formatHoursMinutes(hoursDecimal) {
+  if (hoursDecimal == null) return null
+  const totalMinutes = Math.round(hoursDecimal * 60)
+  if (totalMinutes <= 0) return '0h'
+  const h = Math.floor(totalMinutes / 60)
+  const m = totalMinutes % 60
+  if (h > 0 && m > 0) return `${h}h:${m}mins`
+  if (h > 0) return `${h}h`
+  return `${m}mins`
 }
 
 function StatTile({ label, value, tone = 'neutral' }) {
@@ -112,12 +123,12 @@ function EmployeeCard({ employee }) {
           <footer className="employee-card__footer">
             <div>
               <span className="label">Net hours worked</span>
-              <span className="value">{netHours != null ? `${netHours}h` : '—'}</span>
+              <span className="value">{netHours != null ? formatHoursMinutes(netHours) : '—'}</span>
             </div>
             <div>
               <span className="label">Extra hours</span>
               <span className={`value${extraHours ? ' value--highlight' : ''}`}>
-                {extraHours ? `${extraHours}h` : '—'}
+                {extraHours ? formatHoursMinutes(extraHours) : '—'}
               </span>
             </div>
           </footer>
@@ -211,7 +222,7 @@ function App() {
             <StatTile label="Absent" value={stats.absent} tone="critical" />
             <StatTile label="Late arrivals" value={stats.late} tone="warning" />
             <StatTile label="Incomplete scans" value={stats.incomplete} tone="serious" />
-            <StatTile label="Total extra hours" value={stats.extraHours.toFixed(2)} tone="neutral" />
+            <StatTile label="Total extra hours" value={formatHoursMinutes(stats.extraHours)} tone="neutral" />
           </section>
 
           {loading && !data && (
